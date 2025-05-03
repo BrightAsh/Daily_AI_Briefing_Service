@@ -1,0 +1,12 @@
+# MJ
+python-dotenv
+langchain
+openai
+requests
+langchain-community
+transformers
+torch
+sentencepiece
+newspaper3k
+lxml[html_clean]
+lxml_html_clean
