@@ -9,11 +9,13 @@ from dotenv import load_dotenv
 API_KEY = os.getenv("API_KEY")
 CSE_ID = os.getenv("CSE_ID")
 
-def crawl_tistory(keyword):
+def crawl_tistory(keyword, max_results):
     results = crawl_tistory_blogs_google(max_results=10)
     for r in results:
         print("\n📌 URL:", r['url'])
         print("내용 미리보기:", r['content'][:300])
+    
+    return results
 
 # Step 1: Google CSE로 티스토리 글 URL 검색
 def search_tistory_google(keyword, max_results=10):
