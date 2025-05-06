@@ -1,48 +1,52 @@
 import json
-from transformers import pipeline
+from transformers import LEDTokenizer, LEDForConditionalGeneration
 
-# 1️⃣ 모델 초기화
-summarizer = pipeline("summarization", model="allenai/led-base-16384")
+# 1️⃣ LED 요약 모델 로드
+model_name = 'allenai/led-base-16384'
+tokenizer = LEDTokenizer.from_pretrained(model_name)
+model = LEDForConditionalGeneration.from_pretrained(model_name)
 
-# 2️⃣ 요약할 파일 경로
-INPUT_FILE = "news_data_full.json"
-OUTPUT_FILE = "news_data_summaries.json"
+# 2️⃣ 요약 함수 (LED)
+def summarize_led(text, max_input_length=16000):
+    inputs = tokenizer.encode(text, return_tensors="pt", max_length=max_input_length, truncation=True)
+    attention_mask = inputs.ne(tokenizer.pad_token_id).long()  # LED는 attention_mask 필요
+    summary_ids = model.generate(
+        inputs,
+        attention_mask=attention_mask,
+        max_length=512,      # 출력 길이
+        num_beams=4,
+        early_stopping=True
+    )
+    summary = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
+    return summary
 
-# 3️⃣ 데이터 불러오기
-with open(INPUT_FILE, "r", encoding="utf-8") as f:
-    articles = json.load(f)
+# 3️⃣ 중복 문장 제거 함수 (동일)
+def remove_duplicate_sentences(text):
+    seen = set()
+    result = []
+    sentences = text.split('.')
+    for s in sentences:
+        s_clean = s.strip()
+        if s_clean and s_clean not in seen:
+            seen.add(s_clean)
+            result.append(s_clean)
+    return '. '.join(result)
 
-summarized_articles = []
+# 4️⃣ 계층적 요약 함수 (영어 논문 전용)
+def hierarchical_summary_led(full_text, chunk_size=12000):
+    # 분할 요약
+    text_chunks = [full_text[i:i+chunk_size] for i in range(0, len(full_text), chunk_size)]
+    chunk_summaries = []
+    for i, chunk in enumerate(text_chunks, 1):
+        print(f"    🧩 부분 {i}/{len(text_chunks)} 요약 중...")
+        summary = summarize_led(chunk)
+        chunk_summaries.append(summary)
 
-# 4️⃣ 요약 실행
-for idx, article in enumerate(articles, 1):
-    title = article.get("title", "")
-    full_text = article.get("full_text", "").strip()
+    # 부분 요약 합쳐서 최종 요약
+    combined_summary = " ".join(chunk_summaries)
+    print("    🔄 최종 요약 생성 중...")
+    final_summary = summarize_led(combined_summary)
 
-    if not full_text:
-        print(f"\n[{idx}] ⚠️ {title}: 본문 없음 (스킵)")
-        continue
-
-    print(f"\n[{idx}] 📰 {title}")
-    print(f"📄 본문 길이: {len(full_text)}자")
-
-    # 요약 실행
-    try:
-        summary = summarizer(full_text, max_length=150, min_length=30, do_sample=False)[0]['summary_text']
-        print(f"✅ 요약 완료:\n{summary}")
-
-        summarized_articles.append({
-            "title": title,
-            "url": article.get("url"),
-            "source": article.get("source"),
-            "publishedAt": article.get("publishedAt"),
-            "summary": summary
-        })
-    except Exception as e:
-        print(f"❌ 요약 실패: {e}")
-
-# 5️⃣ 요약 결과 저장
-with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-    json.dump(summarized_articles, f, ensure_ascii=False, indent=2)
-
-print(f"\n✅ 총 {len(summarized_articles)}건 요약 완료 → '{OUTPUT_FILE}' 저장됨")
+    # 최종 요약 후 중복 제거
+    cleaned_summary = remove_duplicate_sentences(final_summary)
+    return cleaned_summary

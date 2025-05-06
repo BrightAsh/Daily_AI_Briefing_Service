@@ -4,9 +4,6 @@ from langchain.tools import StructuredTool
 from dotenv import load_dotenv
 import os
 
-from module.synonym_finder import find_synonyms
-
-
 
 def crawl_news(keyword, days):
     return f"뉴스 결과 for {keyword} ({days}일)"

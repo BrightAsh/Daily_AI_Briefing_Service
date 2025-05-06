@@ -5,16 +5,17 @@ import requests
 import io
 from pdfminer.high_level import extract_text
 
-def download_paper(keyword):
-    papers = get_recent_arxiv_pdfs(keyword, max_results=50)
+def download_paper(keyword,day):
+    papers = get_recent_arxiv_pdfs(keyword,day, max_results=1)
 
     paper_body = []
 
     for paper in papers:
         print(f"\n⏳ Processing: {paper['title']}")
         body_text = extract_body_from_pdf_url(paper['pdf_url'])
-
         if body_text:
+            body_text = body_text.replace('\n', ' ')
+            paper["title"] = paper["title"].replace('\n', ' ')
             print(f"✅ Extracted body length: {len(body_text)} chars")
             paper_body.append({
             "title": paper["title"],
@@ -26,13 +27,13 @@ def download_paper(keyword):
 
     return paper_body
 
-def get_recent_arxiv_pdfs(keyword, max_results=100):
+def get_recent_arxiv_pdfs(keyword,day, max_results=100):
     query = f"search_query=all:{keyword}&sortBy=submittedDate&sortOrder=descending&max_results={max_results}"
     url = f"http://export.arxiv.org/api/query?{query}"
     feed = feedparser.parse(url)
 
     now = datetime.utcnow().replace(tzinfo=pytz.utc)
-    one_day_ago = now - timedelta(days=1)
+    one_day_ago = now - timedelta(days=day)
 
     papers = []
     for entry in feed.entries:
