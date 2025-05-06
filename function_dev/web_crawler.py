@@ -9,23 +9,14 @@ from dotenv import load_dotenv
 API_KEY = os.getenv("API_KEY")
 CSE_ID = os.getenv("CSE_ID")
 
-def crawl_tistory(keyword, max_results):
-    results = crawl_tistory_blogs_google(max_results=10)
-    for r in results:
-        print("\n📌 URL:", r['url'])
-        print("내용 미리보기:", r['content'][:300])
-    
-    return results
-
-# Step 1: Google CSE로 티스토리 글 URL 검색
-def search_tistory_google(keyword, max_results=10):
+def search_tistory_google(keyword, days, max_results=10):
     links = []
     start_index = 1
 
     while len(links) < max_results:
         url = (
             f"https://www.googleapis.com/customsearch/v1"
-            f"?key={API_KEY}&cx={CSE_ID}&q={keyword}&start={start_index}&sort=date"
+            f"?key={API_KEY}&cx={CSE_ID}&q={keyword}&start={start_index}&sort=date&dateRestrict=d{days}"
         )
         res = requests.get(url)
         data = res.json()
@@ -72,8 +63,8 @@ def extract_tistory_content(url):
         return f"⚠️ 오류 발생: {e}"
 
 # Step 3: 실행 예시
-def crawl_tistory_blogs_google(keyword, max_results=10):
-    blog_links = search_tistory_google(keyword, max_results)
+def crawl_tistory_blogs_google(keyword, days, max_results=10):
+    blog_links = search_tistory_google(keyword, days, max_results)
     extracted = []
 
     for item in blog_links:
@@ -84,7 +75,7 @@ def crawl_tistory_blogs_google(keyword, max_results=10):
         extracted.append({
             "title": title,
             "url": url,
-            "content": content
+            "full_text": content
         })
         time.sleep(1)
 
