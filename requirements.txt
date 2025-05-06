@@ -11,6 +11,7 @@ sentencepiece
 newspaper3k
 lxml[html_clean]
 lxml_html_clean
+fpdf2
 
 =======
 >>>>>>> 1bbc7b9ca2685f951319b804751e9d99fea589e9
