@@ -5,6 +5,23 @@ import requests
 import io
 from pdfminer.high_level import extract_text
 
+def download_paper(keyword):
+    papers = get_recent_arxiv_pdfs(keyword, max_results=50)
+
+    paper_body = []
+
+    for paper in papers:
+        print(f"\n⏳ Processing: {paper['title']}")
+        body_text = extract_body_from_pdf_url(paper['pdf_url'])
+
+        if body_text:
+            print(f"✅ Extracted body length: {len(body_text)} chars")
+            paper_body.append(body_text)
+        else:
+            print("❌ Failed to extract body text.")
+
+    return paper_body
+
 def get_recent_arxiv_pdfs(keyword, max_results=100):
     query = f"search_query=all:{keyword}&sortBy=submittedDate&sortOrder=descending&max_results={max_results}"
     url = f"http://export.arxiv.org/api/query?{query}"
