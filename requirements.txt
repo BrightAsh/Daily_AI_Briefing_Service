@@ -1,0 +1,4 @@
+# JR
+feedparser
+pytz
+pdfminer.six
