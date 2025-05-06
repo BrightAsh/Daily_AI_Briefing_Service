@@ -4,15 +4,9 @@ from langchain.tools import StructuredTool
 from dotenv import load_dotenv
 import os
 
-
-def crawl_news(keyword, days):
-    return f"뉴스 결과 for {keyword} ({days}일)"
-
-def crawl_blog(keyword, days):
-    return f"블로그 결과 for {keyword} ({days}일)"
-
-def crawl_papers(keyword, days):
-    return f"논문 결과 for {keyword} ({days}일)"
+from module.News import News_pipeline
+from module.Paper import Paper_pipeline
+from module.Blog import blog_pipeline
 
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -20,33 +14,31 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 # ✅ 툴 정의 (동의어 & 범위 명시)
 tools = [
     StructuredTool.from_function(
-        crawl_news,
+        News_pipeline,
         name="crawl_news",
         description=(
-            "뉴스를 크롤링하고 요약합니다. "
-            "사용자가 '뉴스', '기사', '보도', '뉴스 요약', 'news' 등으로 요청할 때만 사용됩니다. "
-            "다른 요청(예: 일자리, 상품 정보 등)에는 대응하지 않습니다."
+            "뉴스를 크롤링하고 요약하는 파이프라인. "
+            "사용자가 '뉴스', '기사', '보도', 'news' 등의 키워드로 요청할 때 사용합니다."
         ),
     ),
     StructuredTool.from_function(
-        crawl_blog,
+        blog_pipeline,
         name="crawl_blog",
         description=(
-            "블로그 글을 크롤링하고 요약합니다. "
-            "사용자가 '블로그', '글', '게시글', 'blog', '블로그 요약' 등으로 요청할 때만 사용됩니다. "
-            "다른 요청은 대응하지 않습니다."
+            "블로그 글을 크롤링하고 요약하는 파이프라인. "
+            "사용자가 '블로그', 'blog', '블로그 글', '블로그 요약' 요청 시 사용합니다."
         ),
     ),
     StructuredTool.from_function(
-        crawl_papers,
+        Paper_pipeline,
         name="crawl_papers",
         description=(
-            "논문을 크롤링하고 요약합니다. "
-            "사용자가 '논문', '학술자료', '연구자료', 'paper', '논문 요약' 등으로 요청할 때만 사용됩니다. "
-            "다른 요청은 대응하지 않습니다."
+            "논문을 크롤링하고 요약하는 파이프라인. "
+            "사용자가 '논문', '학술자료', 'paper', '논문 요약' 요청 시 사용합니다."
         ),
     ),
 ]
+
 
 # ✅ LLM 설정 (OpenAI 모델 사용)
 llm = ChatOpenAI(
