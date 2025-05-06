@@ -6,7 +6,7 @@ import os
 
 from module.News import News_pipeline
 from module.Paper import Paper_pipeline
-from module.Blog import blog_pipeline
+from module.Blogs import Blogs_pipeline
 
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -22,7 +22,7 @@ tools = [
         ),
     ),
     StructuredTool.from_function(
-        blog_pipeline,
+        Blogs_pipeline,
         name="crawl_blog",
         description=(
             "블로그 글을 크롤링하고 요약하는 파이프라인. "
