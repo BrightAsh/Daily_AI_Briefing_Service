@@ -70,43 +70,4 @@ def hierarchical_summary(full_text, keywords=None, chunk_size=1000):
     cleaned_summary = remove_duplicate_sentences(final_summary)
     return cleaned_summary
 
-# 7️⃣ 데이터 불러오기
-with open(INPUT_FILE, "r", encoding="utf-8") as f:
-    articles = json.load(f)
 
-summarized_articles = []
-
-# 8️⃣ 요약 실행 (키워드 중심 요약)
-# 👉 키워드 없으면 None 또는 []로 입력
-KEYWORDS = ['AI', '인공지능', '딥러닝']  # 필요에 따라 변경 가능
-
-for idx, article in enumerate(articles, 1):
-    title = article.get("title", "")
-    full_text = article.get("full_text", "").strip()
-
-    if not full_text:
-        print(f"\n[{idx}] ⚠️ {title}: 본문 없음 (스킵)")
-        continue
-
-    print(f"\n[{idx}] 📰 {title}")
-    print(f"📄 본문 길이: {len(full_text)}자")
-
-    try:
-        summary = hierarchical_summary(full_text, keywords=KEYWORDS)
-        print(f"✅ 최종 요약 완료:\n{summary}")
-
-        summarized_articles.append({
-            "title": title,
-            "url": article.get("url"),
-            "source": article.get("source"),
-            "publishedAt": article.get("publishedAt"),
-            "summary": summary
-        })
-    except Exception as e:
-        print(f"❌ 요약 실패: {e}")
-
-# 9️⃣ 요약 결과 저장
-with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-    json.dump(summarized_articles, f, ensure_ascii=False, indent=2)
-
-print(f"\n✅ 총 {len(summarized_articles)}건 요약 완료 → '{OUTPUT_FILE}'에 저장됨!")

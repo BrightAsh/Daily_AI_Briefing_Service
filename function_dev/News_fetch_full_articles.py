@@ -13,10 +13,7 @@ def fetch_full_article_auto(url):
         return None
 
 
-def process_articles(file_path, output_path):
-    with open(file_path, "r", encoding="utf-8") as f:
-        articles = json.load(f)
-
+def process_articles(articles):
     full_articles = []
     for idx, article in enumerate(articles, 1):
         url = article.get('url')
@@ -40,12 +37,5 @@ def process_articles(file_path, output_path):
 
         time.sleep(1)  # 너무 빠른 요청 방지
 
-    # 결과 저장
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(full_articles, f, ensure_ascii=False, indent=2)
-
-    print(f"\n✅ 본문 포함 뉴스 {len(full_articles)}개를 '{output_path}'에 저장 완료!")
-
-
-if __name__ == "__main__":
-    process_articles("news_data.json", "news_data_full.json")
+    print(f"\n✅ 본문 포함 뉴스 {len(full_articles)}개 완료!")
+    return full_articles

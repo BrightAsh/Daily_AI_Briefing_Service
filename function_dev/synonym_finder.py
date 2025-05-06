@@ -7,7 +7,9 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 
-def find_synonyms(keyword, n=5, country='Korea'):
+def find_synonyms(keyword, n, country):
+    if n==1:
+        return [keyword]
     llm = ChatOpenAI(
         model_name="gpt-3.5-turbo",
         openai_api_key=OPENAI_API_KEY,
