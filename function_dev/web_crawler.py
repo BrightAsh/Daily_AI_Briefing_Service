@@ -13,7 +13,7 @@ def crawl_tistory(keyword, max_results):
     results = crawl_tistory_blogs_google(max_results=10)
     for r in results:
         print("\n📌 URL:", r['url'])
-        print("내용 미리보기:", r['content'][:300])
+        print("내용 미리보기:", r['full_text'][:300])
     
     return results
 
@@ -84,7 +84,7 @@ def crawl_tistory_blogs_google(keyword, max_results=10):
         extracted.append({
             "title": title,
             "url": url,
-            "content": content
+            "full_text": content
         })
         time.sleep(1)
 
