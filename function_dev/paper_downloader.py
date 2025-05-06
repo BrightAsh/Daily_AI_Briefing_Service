@@ -16,7 +16,11 @@ def download_paper(keyword):
 
         if body_text:
             print(f"✅ Extracted body length: {len(body_text)} chars")
-            paper_body.append(body_text)
+            paper_body.append({
+            "title": paper["title"],
+            "body": body_text,
+            "url": paper["pdf_url"]
+        })
         else:
             print("❌ Failed to extract body text.")
 
