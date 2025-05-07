@@ -1,6 +1,9 @@
 import smtplib
 from email.message import EmailMessage
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def send_email_with_pdf(to_email, pdf_path, subject="AI 브리핑 보고서", body="요청하신 요약 PDF 파일을 첨부합니다."):
     """
