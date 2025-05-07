@@ -1,6 +1,9 @@
+import sys
+sys.path.append("E:\Daily_AI_Briefing_Service")
+
 from function_dev.synonym_finder import find_synonyms
 from function_dev.paper_downloader import download_paper
-from function_dev.papaer_summarizer_connector import hierarchical_summary_led
+from function_dev.papaer_summarizer_connector import summarize_bart
 
 def Paper_pipeline(keyword, days, n=1, country='Korea'):
     keywords = find_synonyms(keyword, n, country)
@@ -28,7 +31,7 @@ def Paper_pipeline(keyword, days, n=1, country='Korea'):
             print(f"📄 본문 길이: {len(full_text)}자")
 
             try:
-                summary = hierarchical_summary_led(full_text)
+                summary = summarize_bart(full_text)
                 print(f"✅ 최종 요약 완료:\n{summary[:500]}...")
 
                 summarized_papers.append({
@@ -39,3 +42,6 @@ def Paper_pipeline(keyword, days, n=1, country='Korea'):
             except Exception as e:
                 print(f"❌ 요약 실패: {e}")
     return summarized_papers
+
+if __name__ == "__main__":
+    print(Paper_pipeline("ai", 3))
