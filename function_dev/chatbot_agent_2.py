@@ -27,7 +27,7 @@ class GoogleSearch:
 # 환경 변수 로드
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-SERPAPI_API_KEY = "832cb2ada825e59a668f56ca2a0bf2036973e6e4c03c84cc28d4f85b8661b519"
+SERPAPI_API_KEY = os.getenv("SERPAPI_KEY")
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 # 벡터 DB 로딩
