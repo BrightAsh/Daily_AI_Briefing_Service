@@ -15,6 +15,8 @@ from dotenv import load_dotenv
 
 import os
 import re
+import uuid
+import json
 
 def parse_news_output(llm_output: str):
     """
@@ -94,6 +96,11 @@ agent = initialize_agent(
 def run_pipeline(prompt, country, synonym_range, email):
     result = agent.invoke(prompt)
     result_json = parse_news_output(result['output'])
+    # database 폴더에 JSON 저장, 매번 다른 이름이 필요하니 UUID 사용
+    
+    unique_filename = f"summary_{uuid.uuid4()}.json"
+    with open(os.path.join("database", unique_filename), "w", encoding="utf-8") as f:
+        json.dump(result_json, f, ensure_ascii=False, indent=4)
     
     # RAG 저장
     
