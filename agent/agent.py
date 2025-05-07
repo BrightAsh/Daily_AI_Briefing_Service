@@ -4,17 +4,22 @@ from langchain.tools import StructuredTool
 from dotenv import load_dotenv
 import os
 
-from module.News import News_pipeline
-from module.Paper import Paper_pipeline
-from module.Blogs import Blogs_pipeline
+# ✅ wrapping 함수 import
+from module.wrapper import News_pipeline_wrapped, Blogs_pipeline_wrapped, Paper_pipeline_wrapped, set_web_params
+from function_dev.pdf_creator import export_json_to_pdf
+from function_dev.email_sender import send_email_with_pdf
 
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# ✅ 툴 정의 (동의어 & 범위 명시)
+# web에서 받을 값
+to_email = 'busisi7776@gmail.com'
+set_web_params(1,'korea')
+
+# ✅ 툴 정의 (wrapping 함수 사용)
 tools = [
     StructuredTool.from_function(
-        News_pipeline,
+        News_pipeline_wrapped,
         name="crawl_news",
         description=(
             "뉴스를 크롤링하고 요약하는 파이프라인. "
@@ -22,7 +27,7 @@ tools = [
         ),
     ),
     StructuredTool.from_function(
-        Blogs_pipeline,
+        Blogs_pipeline_wrapped,
         name="crawl_blog",
         description=(
             "블로그 글을 크롤링하고 요약하는 파이프라인. "
@@ -30,7 +35,7 @@ tools = [
         ),
     ),
     StructuredTool.from_function(
-        Paper_pipeline,
+        Paper_pipeline_wrapped,
         name="crawl_papers",
         description=(
             "논문을 크롤링하고 요약하는 파이프라인. "
@@ -39,15 +44,14 @@ tools = [
     ),
 ]
 
-
-# ✅ LLM 설정 (OpenAI 모델 사용)
+# ✅ LLM 설정
 llm = ChatOpenAI(
     model="gpt-3.5-turbo",
     temperature=0,
     openai_api_key=OPENAI_API_KEY,
 )
 
-# ✅ 시스템 프롬프트 설정 (agent_kwargs로 전달)
+# ✅ 시스템 프롬프트
 system_message = """
 너는 뉴스, 블로그, 논문 자료를 크롤링하고 요약하는 AI 에이전트야.
 사용자의 요청이 뉴스, 블로그, 논문 중 하나라도 포함되면 적절한 툴을 실행해야 해.
@@ -69,4 +73,6 @@ agent = initialize_agent(
 if __name__ == "__main__":
     user_input = input("요청을 입력하세요: ")
     result = agent.invoke(user_input)
+    pdf_path = export_json_to_pdf(result)
+    send_email_with_pdf(to_email, pdf_path)
     print("\n[최종 결과]\n", result)
