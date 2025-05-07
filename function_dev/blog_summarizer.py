@@ -1,5 +1,9 @@
 import json
 from transformers import BartForConditionalGeneration, PreTrainedTokenizerFast
+from sentence_transformers import SentenceTransformer, util
+
+# 임베딩 모델 로드
+embedder = SentenceTransformer("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 
 # 1️⃣ KoBART 요약 모델 로드
 model = BartForConditionalGeneration.from_pretrained('digit82/kobart-summarization')
@@ -43,15 +47,15 @@ def remove_duplicate_sentences(text):
     return '. '.join(result)
 
 # 6️⃣ 계층적 요약 함수 (분할 + 부분 요약 + 최종 요약 + 중복 제거)
-def hierarchical_summary(full_text, keywords=None, chunk_size=1000):
+def hierarchical_summary(full_text, keyword=None, chunk_size=1000):
     # 키워드 필터링 (선택)
-    if keywords:
-        print(f"🔎 키워드 중심 문장 추출 중... 키워드: {keywords}")
-        filtered_text = extract_sentences_with_keywords(full_text, keywords)
-        if filtered_text.strip():
-            full_text = filtered_text
-        else:
-            print("⚠️ 키워드 포함 문장이 없어 전체 본문으로 진행합니다.")
+    # if keywords:
+    #     print(f"🔎 키워드 중심 문장 추출 중... 키워드: {keywords}")
+    #     filtered_text = extract_sentences_with_keywords(full_text, keywords)
+    #     if filtered_text.strip():
+    #         full_text = filtered_text
+    #     else:
+    #         print("⚠️ 키워드 포함 문장이 없어 전체 본문으로 진행합니다.")
 
     # 분할 요약
     text_chunks = [full_text[i:i+chunk_size] for i in range(0, len(full_text), chunk_size)]
@@ -66,7 +70,19 @@ def hierarchical_summary(full_text, keywords=None, chunk_size=1000):
     print("    🔄 최종 요약 생성 중...")
     final_summary = summarize_kobart(combined_summary)
 
+    if not is_relevant(final_summary, keyword):
+        print(f"⛔️ 무관한 블로그 제외: \"{final_summary[:100]}...\"")
+        return None
+
     # 최종 요약 후 중복 제거
     cleaned_summary = remove_duplicate_sentences(final_summary)
     return cleaned_summary
 
+def is_relevant(summary: str, keyword: str) -> bool:
+    # 유사도 필터 기준 (0~1 사이 값, 높을수록 엄격함)
+    SIMILARITY_THRESHOLD = 0.2
+
+    embeddings = embedder.encode([summary, keyword])
+    similarity = util.cos_sim(embeddings[0], embeddings[1]).item()
+    print(f"    🔍 유사도 점수: {similarity:.4f} (키워드: {keyword})")
+    return similarity >= SIMILARITY_THRESHOLD

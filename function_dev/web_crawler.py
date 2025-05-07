@@ -9,6 +9,8 @@ from dotenv import load_dotenv
 API_KEY = os.getenv("API_KEY")
 CSE_ID = os.getenv("CSE_ID")
 
+MIN_CONTENT_LENGTH = 500
+
 def search_tistory_google(keyword, days, max_results=10):
     links = []
     start_index = 1
@@ -72,6 +74,11 @@ def crawl_tistory_blogs_google(keyword, days, max_results=10):
         title = item["title"]
         print(f"📘 크롤링 중: {title} ({url})")
         content = extract_tistory_content(url)
+
+        if len(content) < MIN_CONTENT_LENGTH:
+            print(f"⏭️ 스킵: '{item['title']}' (본문 너무 짧음, {len(content)}자)")
+            continue
+
         extracted.append({
             "title": title,
             "url": url,
