@@ -46,6 +46,3 @@ def Blogs_pipeline(keyword, days, n=1, country='Korea'):
             except Exception as e:
                 print(f"❌ 요약 실패: {e}")
     return summarized_blogs
-
-if __name__ == "__main__":
-    Blogs_pipeline("ai", 3)
