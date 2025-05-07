@@ -2,6 +2,7 @@ from fpdf import FPDF
 from datetime import datetime
 import os
 
+
 def export_json_to_pdf(data, output_path="summary_report.pdf", title="Summary Report"):
     pdf = FPDF()
     pdf.add_page()
@@ -45,6 +46,7 @@ def export_json_to_pdf(data, output_path="summary_report.pdf", title="Summary Re
 
     pdf.output(output_path)
     print(f"✅ PDF 생성 완료: {output_path}")
+    return output_path
 
 # 테스트 구동
 if __name__ == "__main__":
