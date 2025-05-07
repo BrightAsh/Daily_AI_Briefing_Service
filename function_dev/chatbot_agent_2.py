@@ -22,7 +22,10 @@ CHUNK_PATH = "doc_chunks.npy"
 EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 chunks = np.load(CHUNK_PATH, allow_pickle=True)
 embedding_model = HuggingFaceEmbeddings(model_name=EMBED_MODEL)
-documents = [Document(page_content=c["text"]) for c in chunks if isinstance(c, dict)]
+documents = [
+    Document(page_content=c["text"], metadata={"source": c["source"]})
+    for c in chunks if isinstance(c, dict)
+]
 vectordb = FAISS.from_documents(documents, embedding=embedding_model)
 retriever = vectordb.as_retriever(search_type="mmr", search_kwargs={"k": 3})
 
@@ -36,15 +39,22 @@ rag_chain = RetrievalQA.from_chain_type(
 # 안전한 RAG 실행 함수 정의
 def safe_rag_run(query: str) -> str:
     docs = retriever.get_relevant_documents(query)
-    joined = " ".join([doc.page_content for doc in docs])
-    if not joined or len(joined.strip()) < 50:
-        return "죄송합니다. 이 질문에 대해 참고할 수 있는 문서가 없습니다."
+    print(f"🔍 관련 문서 수: {len(docs)}")
+    for i, d in enumerate(docs[:2]):
+        print(f"[{i}] {d.page_content[:100]}...")
+
+    if not docs or all(len(doc.page_content.strip()) < 50 for doc in docs):
+        return "🔎 관련 문서를 찾지 못했습니다."
     return rag_chain.run(query)
 
 # MCP 기반 요약기 함수 정의
 def mcp_summarize_tool(text: str) -> str:
     messages = [
-        {"role": "system", "content": "너는 입력된 내용을 간결하게 요약하거나 간단한 질문에 답하는 도우미야."},
+        {"role": "system", "content": (
+            "너는 AI 전문가로서 사용자의 질문에 정확하고 친절하게 답변하는 도우미야. "
+            "벡터 DB의 검색 결과가 없거나 문서가 부족하면 직접 답하거나 적절한 요약을 제공해줘. "
+            "절대로 '인터넷 검색이 불가능합니다'라고 말하지 마. 답은 항상 한국어로 해줘."
+        )},
         {"role": "user", "content": f"{text}"}
     ]
     response = client.chat.completions.create(
@@ -58,18 +68,24 @@ def mcp_summarize_tool(text: str) -> str:
 qa_tool = Tool(
     name="document_query_tool",
     func=safe_rag_run,
-    description="처음 들어보는 개념에 대한 질문에만 사용하세요. 관련 정보가 없으면 검색을 중단합니다."
+    description=(
+        "뉴스, 블로그, 논문 등 벡터 DB에서 정보를 검색해야 할 때 사용하세요. "
+        "만약 관련 문서가 없다면 다른 도구를 사용하세요."
+    )
 )
 
-mcp_tool = Tool(
+summary_tool = Tool(
     name="text_summarizer",
     func=mcp_summarize_tool,
-    description="일반적인 질문이나 요약 요청을 처리하는 데 적합한 도구입니다. 질문이 단순하거나 문맥 검색이 필요하지 않은 경우 사용하세요."
+    description=(
+        "일반적인 질문이나 요약 요청을 처리하는 데 사용하세요. "
+        "정보 검색이 불필요하거나 실패한 경우에도 사용됩니다."
+    )
 )
 
 # Agent 초기화
 agent = initialize_agent(
-    tools=[qa_tool, mcp_tool],
+    tools=[qa_tool, summary_tool],
     llm=ChatOpenAI(model_name="gpt-4", temperature=0.3),
     agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
     verbose=True

@@ -1,32 +1,28 @@
-# 뉴스 및 논문 요약용 벡터 저장 파이프라인 (에이전트 분리)
+# 뉴스/블로그/논문 JSON 기반 벡터 저장 파이프라인 (에이전트 분리)
 # -----------------------------------------------------------
-# 목적: 뉴스 데이터(JSON) 및 논문 PDF를 읽어 벡터 DB와 chunk 데이터 저장
+# 목적: 뉴스, 블로그, 논문 JSON 파일을 읽어 벡터 DB와 chunk 데이터 저장
 
 import os
 import json
-import glob
-import fitz  # PyMuPDF
 import numpy as np
 import faiss
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.embeddings import HuggingFaceEmbeddings
+from langchain.docstore.document import Document
+from langchain.vectorstores import FAISS
 
 # 설정값
-PDF_FOLDER = "../sample_papers"
-NEWS_JSON_PATH = "news_data_full.json"
-FAISS_INDEX_PATH = "faiss_index.index"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+JSON_FILES = [
+    (os.path.join(BASE_DIR, "..", "sample_news", "news_data_summaries.json"), "news"),
+    (os.path.join(BASE_DIR, "..", "sample_blogs", "blogs_data_summaries.json"), "blog"),
+    (os.path.join(BASE_DIR, "..", "sample_papers", "arxiv_papers_summaries.json"), "paper")
+]
+FAISS_INDEX_PATH = "faiss_index"
 CHUNK_SAVE_PATH = "doc_chunks.npy"
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
-# PDF 로딩
-def load_pdf(file_path):
-    doc = fitz.open(file_path)
-    text = ""
-    for page in doc:
-        text += page.get_text()
-    return text
-
-# 텍스트 청크
+# 텍스트 청크화 함수
 def chunk_text(text, chunk_size=500, chunk_overlap=50):
     splitter = CharacterTextSplitter(
         separator="\n",
@@ -35,68 +31,41 @@ def chunk_text(text, chunk_size=500, chunk_overlap=50):
     )
     return splitter.split_text(text)
 
-# 뉴스 JSON 로딩 및 청크화
-def load_news_chunks():
-    if not os.path.exists(NEWS_JSON_PATH):
+# JSON 로딩 및 청크화
+def load_chunks_from_json(file_path, source_label):
+    if not os.path.exists(file_path):
+        print(f"❌ 파일이 존재하지 않습니다: {file_path}")
         return []
-    with open(NEWS_JSON_PATH, "r", encoding="utf-8") as f:
-        news_items = json.load(f)
+    with open(file_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
     chunks = []
-    for item in news_items:
+    for item in data:
         title = item.get("title", "")
-        content = item.get("full_text", "")
+        content = item.get("summary", "")
         if content:
-            chunks.append({
-                "text": f"[뉴스] {title}\n{content.strip()}",
-                "source": "news"
-            })
+            text = f"{title}\n{content.strip()}"
+            chunked = chunk_text(text)
+            chunks.extend([Document(page_content=c, metadata={"source": source_label}) for c in chunked])
+    print(f"✅ {source_label} 청크 수: {len(chunks)}")
     return chunks
 
-# 논문 PDF 로딩 및 청크화
-def load_all_pdfs(pdf_folder):
-    all_chunks = []
-    model = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
-    for file_path in glob.glob(os.path.join(pdf_folder, "*.pdf")):
-        print(f"📄 Processing: {file_path}")
-        text = load_pdf(file_path)
-        chunks = chunk_text(text)
-        named_chunks = [
-            {"text": chunk, "source": "paper"} for chunk in chunks
-        ]
-        all_chunks.extend(named_chunks)
-    return all_chunks
-
 # FAISS + 청크 저장
-def save_to_faiss_with_chunks(named_chunks):
-    texts = [chunk["text"] for chunk in named_chunks]
+def save_to_faiss_with_chunks(documents):
     model = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
-    embeddings = model.embed_documents(texts)
-    dimension = len(embeddings[0])
-    index = faiss.IndexFlatL2(dimension)
-    index.add(np.array(embeddings))
-    faiss.write_index(index, FAISS_INDEX_PATH)
-    np.save(CHUNK_SAVE_PATH, np.array(named_chunks))
-    print(f"✅ 총 {len(named_chunks)} chunks 저장 완료! (뉴스 + 논문 포함)")
+    vectordb = FAISS.from_documents(documents, embedding=model)
+    vectordb.save_local(FAISS_INDEX_PATH)
+    np.save(CHUNK_SAVE_PATH, np.array([{"text": d.page_content, "source": d.metadata["source"]} for d in documents]))
+    print(f"📦 총 {len(documents)} chunks 저장 완료!")
 
 # 실행 엔트리포인트
 if __name__ == "__main__":
-    base_path = os.path.dirname(os.path.abspath(__file__))
-    full_pdf_path = os.path.join(base_path, PDF_FOLDER)
+    print("📥 JSON 데이터 처리 시작...")
+    all_documents = []
+    for file_path, label in JSON_FILES:
+        chunks = load_chunks_from_json(file_path, label)
+        all_documents.extend(chunks)
 
-    print("📥 뉴스 + 논문 처리 시작...")
-    news_chunks = load_news_chunks()
-    print(f"📰 뉴스 청크 수: {len(news_chunks)}")
-    if news_chunks:
-        print(f"예시 뉴스 제목: {news_chunks[0]['text'][:100]}...")
-
-    if os.path.exists(full_pdf_path):
-        paper_chunks = load_all_pdfs(full_pdf_path)
-    else:
-        print(f"❌ PDF 폴더가 존재하지 않습니다: {full_pdf_path}")
-        paper_chunks = []
-
-    all_chunks = news_chunks + paper_chunks
-    if all_chunks:
-        save_to_faiss_with_chunks(all_chunks)
+    if all_documents:
+        save_to_faiss_with_chunks(all_documents)
     else:
         print("⚠️ 저장할 chunk가 없습니다.")
