@@ -1,73 +1,107 @@
-import json
+import torch
 from transformers import BartForConditionalGeneration, PreTrainedTokenizerFast
+from sentence_transformers import SentenceTransformer, util
 
-# 1️⃣ KoBART 요약 모델 로드
-model = BartForConditionalGeneration.from_pretrained('digit82/kobart-summarization')
-tokenizer = PreTrainedTokenizerFast.from_pretrained('digit82/kobart-summarization')
+# ✅ 디바이스 설정
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
-# 2️⃣ 파일 경로
-INPUT_FILE = "news_data_full.json"
-OUTPUT_FILE = "news_data_summaries.json"
+# ✅ KoBART 모델 로드
+kobart_model = BartForConditionalGeneration.from_pretrained('digit82/kobart-summarization').to(device)
+kobart_tokenizer = PreTrainedTokenizerFast.from_pretrained('digit82/kobart-summarization')
 
-# 3️⃣ 요약 함수 (반복 억제 파라미터 적용)
-def summarize_kobart(text, max_input_length=1024):
-    inputs = tokenizer.encode(text, return_tensors="pt", max_length=max_input_length, truncation=True)
-    summary_ids = model.generate(
-        inputs,
-        max_length=200,
-        min_length=30,
-        num_beams=4,
-        no_repeat_ngram_size=3,   # 🔥 3그램 반복 방지
-        repetition_penalty=2.0,   # 🔥 반복 억제 강화
-        early_stopping=True
-    )
-    summary = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
-    return summary
+# ✅ 임베딩 모델 로드
+embedder = SentenceTransformer("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 
-# 4️⃣ 키워드 포함 문장 추출 함수
-def extract_sentences_with_keywords(text, keywords):
-    sentences = text.split('.')
-    selected = [s for s in sentences if any(kw in s for kw in keywords)]
-    return '. '.join(selected)
+# ✅ 문장 단위 분할
+def split_text_into_sentences(text):
+    import re
+    return re.split(r'(?<=[.!?])\s+', text)
 
-# 5️⃣ 중복 문장 제거 함수
-def remove_duplicate_sentences(text):
-    seen = set()
-    result = []
-    sentences = text.split('.')
-    for s in sentences:
-        s_clean = s.strip()
-        if s_clean and s_clean not in seen:
-            seen.add(s_clean)
-            result.append(s_clean)
-    return '. '.join(result)
-
-# 6️⃣ 계층적 요약 함수 (분할 + 부분 요약 + 최종 요약 + 중복 제거)
-def hierarchical_summary(full_text, keywords=None, chunk_size=1000):
-    # 키워드 필터링 (선택)
-    if keywords:
-        print(f"🔎 키워드 중심 문장 추출 중... 키워드: {keywords}")
-        filtered_text = extract_sentences_with_keywords(full_text, keywords)
-        if filtered_text.strip():
-            full_text = filtered_text
+# ✅ 문장 토큰 기준 그룹화
+def group_sentences_by_token_limit(sentences, tokenizer, max_tokens):
+    groups = []
+    current_group = ""
+    for sentence in sentences:
+        tentative_group = current_group + " " + sentence if current_group else sentence
+        tokenized = tokenizer.encode(tentative_group, return_tensors="pt")
+        if tokenized.size(1) <= max_tokens:
+            current_group = tentative_group
         else:
-            print("⚠️ 키워드 포함 문장이 없어 전체 본문으로 진행합니다.")
+            if current_group:
+                groups.append(current_group.strip())
+            current_group = sentence
+    if current_group:
+        groups.append(current_group.strip())
+    return groups
 
-    # 분할 요약
-    text_chunks = [full_text[i:i+chunk_size] for i in range(0, len(full_text), chunk_size)]
+# ✅ 요약 함수
+def summarize_kobart(text, max_input_length=1024, max_output_length=700):
+    inputs = kobart_tokenizer.encode(text, return_tensors="pt", max_length=max_input_length, truncation=True).to(device)
+    summary_ids = kobart_model.generate(
+        inputs,
+        max_length=max_output_length,
+        min_length=100,
+        num_beams=4,
+        no_repeat_ngram_size=3,
+        repetition_penalty=2.0,
+        length_penalty=1.0,
+        early_stopping=False
+    )
+    return kobart_tokenizer.decode(summary_ids[0], skip_special_tokens=True)
+
+# ✅ 유사도 필터 함수
+def is_relevant(summary: str, keyword: str, threshold=0.1) -> bool:
+    embeddings = embedder.encode([summary, keyword])
+    similarity = util.cos_sim(embeddings[0], embeddings[1]).item()
+    print(f"    🔍 유사도 점수: {similarity:.4f} (키워드: {keyword})")
+    return similarity >= threshold
+
+# ✅ 계층적 요약 함수 (코사인 유사도 포함, 중복 제거 X)
+def hierarchical_summary(full_text, keyword=None, max_input_length=1024):
+    sentences = split_text_into_sentences(full_text)
+    text_chunks = group_sentences_by_token_limit(sentences, kobart_tokenizer, max_input_length)
     chunk_summaries = []
+
     for i, chunk in enumerate(text_chunks, 1):
-        print(f"    🧩 부분 {i}/{len(text_chunks)} 요약 중...")
+        print(f"🧩 부분 {i}/{len(text_chunks)} 요약 중...")
         summary = summarize_kobart(chunk)
         chunk_summaries.append(summary)
+        print(f"🧩 부분 {i}/{len(text_chunks)} summary: {summary}")
 
-    # 부분 요약 합쳐서 최종 요약
     combined_summary = " ".join(chunk_summaries)
-    print("    🔄 최종 요약 생성 중...")
-    final_summary = summarize_kobart(combined_summary)
+    combined_token_count = len(kobart_tokenizer.encode(combined_summary))
+    print(f"🔍 combined summary token count: {combined_token_count}")
 
-    # 최종 요약 후 중복 제거
-    cleaned_summary = remove_duplicate_sentences(final_summary)
-    return cleaned_summary
+    if combined_token_count <= max_input_length:
+        print("✅ 최종 요약 입력 길이 가능 → 요약 시작")
+        final_summary = summarize_kobart(combined_summary)
+    else:
+        print("⚠️ combined summary 길이 초과 → 다시 나누기")
+        new_sentences = split_text_into_sentences(combined_summary)
+        new_chunks = group_sentences_by_token_limit(new_sentences, kobart_tokenizer, max_input_length)
 
+        new_summaries = []
+        for i, chunk in enumerate(new_chunks, 1):
+            print(f"🔄 재분할 {i}/{len(new_chunks)} 요약 중...")
+            summary = summarize_kobart(chunk)
+            new_summaries.append(summary)
+            print(f"🔄 재분할 {i}/{len(new_chunks)} summary: {summary}")
 
+        final_combined = " ".join(new_summaries)
+
+        if len(kobart_tokenizer.encode(final_combined)) <= max_input_length:
+            print("✅ 재분할된 combined summary 입력 가능 → 최종 요약")
+            final_summary = summarize_kobart(final_combined)
+        else:
+            print("⚠️ 재분할된 combined summary도 입력 초과 → 더 이상 나누지 않고 그대로 사용")
+            final_summary = final_combined
+
+    # ✅ 유사도 필터 적용
+    if keyword:
+        if is_relevant(final_summary, keyword):
+            return final_summary.replace('\n', ' ')
+        else:
+            print(f"⛔️ 유사도 기준 미달 → 요약 제외")
+            return None
+    else:
+        return final_summary.replace('\n', ' ')
