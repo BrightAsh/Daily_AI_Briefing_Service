@@ -16,3 +16,10 @@ fpdf2
 feedparser
 pytz
 pdfminer.six
+
+# JH
+sentence-transformers
+PyMuPDF
+faiss-cpu
+chromadb
+serpapi

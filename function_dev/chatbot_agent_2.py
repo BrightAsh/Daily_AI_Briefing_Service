@@ -1,4 +1,4 @@
-# Agent 기반 리팩터링: LangChain + FAISS + Tool 호출 자동화 + MCP Tool 추가
+# Agent 기반 리팩터링: LangChain + FAISS + Tool 호출 자동화 + MCP Tool 추가 + Web Search Tool 추가
 # ---------------------------------------------------------------------
 
 import os
@@ -11,10 +11,23 @@ from langchain.docstore.document import Document
 from langchain.chains import RetrievalQA
 from langchain.agents import Tool, initialize_agent, AgentType
 from langchain.chat_models import ChatOpenAI
+import requests
+
+# SerpAPI 대체 GoogleSearch 직접 구현
+class GoogleSearch:
+    def __init__(self, params):
+        self.params = params
+        self.api_key = params.get("api_key")
+
+    def get_dict(self):
+        response = requests.get("https://serpapi.com/search", params=self.params)
+        response.raise_for_status()
+        return response.json()
 
 # 환경 변수 로드
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+SERPAPI_API_KEY = os.getenv("SERPAPI_KEY")
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 # 벡터 DB 로딩
@@ -29,26 +42,30 @@ documents = [
 vectordb = FAISS.from_documents(documents, embedding=embedding_model)
 retriever = vectordb.as_retriever(search_type="mmr", search_kwargs={"k": 3})
 
-# 질의응답 체인 생성 (문서 기반)
-rag_chain = RetrievalQA.from_chain_type(
-    retriever=retriever,
-    llm=ChatOpenAI(model_name="gpt-4", temperature=0.3),
-    return_source_documents=False
-)
+# 소스 필터링 기반 질의응답 실행 함수
+def filtered_rag_run(query: str, source_filter: str) -> str:
+    filtered_docs = [doc for doc in documents if doc.metadata.get("source") == source_filter]
+    if not filtered_docs:
+        return f"⚠️ '{source_filter}' 소스에서 문서를 찾을 수 없습니다."
 
-# 안전한 RAG 실행 함수 정의
-def safe_rag_run(query: str) -> str:
-    docs = retriever.get_relevant_documents(query)
-    print(f"🔍 관련 문서 수: {len(docs)}")
+    local_vectordb = FAISS.from_documents(filtered_docs, embedding=embedding_model)
+    local_retriever = local_vectordb.as_retriever(search_type="mmr", search_kwargs={"k": 3})
+    rag_chain = RetrievalQA.from_chain_type(
+        retriever=local_retriever,
+        llm=ChatOpenAI(model_name="gpt-4", temperature=0.3),
+        return_source_documents=False
+    )
+    docs = local_retriever.get_relevant_documents(query)
+    print(f"🔍 관련 문서 수 ({source_filter}): {len(docs)}")
     for i, d in enumerate(docs[:2]):
         print(f"[{i}] {d.page_content[:100]}...")
 
     if not docs or all(len(doc.page_content.strip()) < 50 for doc in docs):
-        return "🔎 관련 문서를 찾지 못했습니다."
+        return f"🔎 '{source_filter}' 문서에서 유효한 정보를 찾지 못했습니다."
     return rag_chain.run(query)
 
-# MCP 기반 요약기 함수 정의
-def mcp_summarize_tool(text: str) -> str:
+# 요약기 함수 정의
+def run_summary_tool(text: str) -> str:
     messages = [
         {"role": "system", "content": (
             "너는 AI 전문가로서 사용자의 질문에 정확하고 친절하게 답변하는 도우미야. "
@@ -64,28 +81,63 @@ def mcp_summarize_tool(text: str) -> str:
     )
     return response.choices[0].message.content
 
-# 툴 정의
-qa_tool = Tool(
-    name="document_query_tool",
-    func=safe_rag_run,
-    description=(
-        "뉴스, 블로그, 논문 등 벡터 DB에서 정보를 검색해야 할 때 사용하세요. "
-        "만약 관련 문서가 없다면 다른 도구를 사용하세요."
-    )
+# 웹 검색 기반 답변 함수 (Google via SerpAPI)
+def search_web_tool(query: str) -> str:
+    search = GoogleSearch({
+        "q": query,
+        "api_key": SERPAPI_API_KEY,
+        "num": 3
+    })
+    results = search.get_dict()
+
+    if "organic_results" not in results:
+        return "❌ 검색 결과를 불러오는 데 실패했습니다."
+
+    output = "🌐 아래 정보는 Google 검색(SerpAPI) 결과를 기반으로 합니다:\n"
+    for item in results["organic_results"][:3]:
+        title = item.get("title", "제목 없음")
+        link = item.get("link", "")
+        snippet = item.get("snippet", "")
+        output += f"\n🔗 [{title}]({link})\n{snippet}\n"
+
+    return output
+
+# 각 소스 전용 QA 도구 생성
+qa_news_tool = Tool(
+    name="news_query_tool",
+    func=lambda q: filtered_rag_run(q, "news"),
+    description="뉴스 관련 정보가 필요할 때 사용합니다."
 )
 
+qa_blog_tool = Tool(
+    name="blog_query_tool",
+    func=lambda q: filtered_rag_run(q, "blog"),
+    description="블로그 관련 정보가 필요할 때 사용합니다."
+)
+
+qa_paper_tool = Tool(
+    name="paper_query_tool",
+    func=lambda q: filtered_rag_run(q, "paper"),
+    description="논문 관련 정보가 필요할 때 사용합니다."
+)
+
+# 일반 요약/처리용 도구
 summary_tool = Tool(
     name="text_summarizer",
-    func=mcp_summarize_tool,
-    description=(
-        "일반적인 질문이나 요약 요청을 처리하는 데 사용하세요. "
-        "정보 검색이 불필요하거나 실패한 경우에도 사용됩니다."
-    )
+    func=run_summary_tool,
+    description="일반적인 질문이나 요약 요청에 사용됩니다."
+)
+
+# 웹 검색 도구
+web_tool = Tool(
+    name="web_search",
+    func=search_web_tool,
+    description="RAG와 요약으로도 답변이 불가능할 때 사용. 최신 정보나 실시간 검색이 필요한 경우 사용."
 )
 
 # Agent 초기화
 agent = initialize_agent(
-    tools=[qa_tool, summary_tool],
+    tools=[qa_news_tool, qa_blog_tool, qa_paper_tool, summary_tool, web_tool],
     llm=ChatOpenAI(model_name="gpt-4", temperature=0.3),
     agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
     verbose=True
