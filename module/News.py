@@ -21,7 +21,7 @@ def News_pipeline(keyword, days, n=1, country='Korea'):
         print(f"📄 본문 길이: {len(full_text)}자")
 
         try:
-            summary = hierarchical_summary(full_text, keywords=keywords)
+            summary = hierarchical_summary(full_text,keyword)
             print(f"✅ 최종 요약 완료:\n{summary}")
 
             summarized_articles.append({
@@ -32,3 +32,14 @@ def News_pipeline(keyword, days, n=1, country='Korea'):
         except Exception as e:
             print(f"❌ 요약 실패: {e}")
     return summarized_articles
+
+
+import json
+
+result = News_pipeline('인공지능', 2, 1)  # 기존 실행 코드
+
+# ✅ JSON 파일 저장
+with open('news_summary_result.json', 'w', encoding='utf-8') as f:
+    json.dump(result, f, ensure_ascii=False, indent=4)
+
+print("🎉 결과가 news_summary_result.json 파일에 저장되었습니다!")
