@@ -12,6 +12,7 @@ load_dotenv()
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
 
 def fetch_data_newsapi(keywords, day=1):
+    day = int(day)
     all_articles = []
     seen_titles = set()  # 중복 방지용
 

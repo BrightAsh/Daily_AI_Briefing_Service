@@ -5,7 +5,7 @@ from function_dev.News_summarizer import hierarchical_summary
 
 def News_pipeline(keyword, days, n=1, country='Korea'):
     keywords = find_synonyms(keyword, n, country)
-    all_articles = fetch_data_newsapi(keywords, days)
+    all_articles = fetch_data_newsapi(keywords, days)[:2]
     full_articles = process_articles(all_articles)
 
     summarized_articles = []
