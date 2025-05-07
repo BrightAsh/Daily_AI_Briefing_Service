@@ -68,26 +68,21 @@ def extract_body_from_pdf_url(pdf_url):
 def remove_abstract_and_references(text: str) -> str:
     lines = text.splitlines()
     body_lines = []
-    skip = False
+    capturing = False
 
     for line in lines:
         line_lower = line.strip().lower()
 
-        # 스킵 조건: Abstract 시작
-        if "abstract" in line_lower and len(line_lower) < 30:
-            skip = True
-            continue
+        # 시작 조건: Introduction 등장 시부터 시작
+        if not capturing and "introduction" in line_lower and len(line_lower) < 30:
+            capturing = True
+            continue  # 'Introduction' 라인은 건너뜀
 
-        # Abstract 종료: Introduction 등장 시 재시작
-        if skip and ("introduction" in line_lower and len(line_lower) < 30):
-            skip = False
-            continue
-
-        # References 등장 시 종료
-        if "references" in line_lower and len(line_lower) < 30:
+        # 종료 조건: References 등장 시 종료
+        if capturing and "references" in line_lower and len(line_lower) < 30:
             break
 
-        if not skip:
+        if capturing:
             body_lines.append(line)
 
     return "\n".join(body_lines).strip()
