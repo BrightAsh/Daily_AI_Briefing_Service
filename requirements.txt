@@ -13,6 +13,7 @@ lxml_html_clean
 fpdf2
 rouge-score
 evaluate
+deep-translator
 
 # JR
 feedparser
