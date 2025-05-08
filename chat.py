@@ -49,7 +49,7 @@ def filtered_rag_run(query: str, source_filter: str) -> str:
     local_retriever = local_vectordb.as_retriever(search_type="mmr", search_kwargs={"k": 3})
     rag_chain = RetrievalQA.from_chain_type(
         retriever=local_retriever,
-        llm=ChatOpenAI(model_name="gpt-4", temperature=0.3),
+        llm=ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0.3),
         return_source_documents=False
     )
     docs = local_retriever.get_relevant_documents(query)
@@ -68,7 +68,7 @@ def run_summary_tool(text: str) -> str:
         {"role": "user", "content": f"{text}"}
     ]
     response = client.chat.completions.create(
-        model="gpt-4",
+        model="gpt-3.5-turbo",
         messages=messages,
         temperature=0.2
     )
@@ -106,7 +106,7 @@ tools = [
 # 🧠 에이전트 초기화
 agent = initialize_agent(
     tools=tools,
-    llm=ChatOpenAI(model_name="gpt-4", temperature=0.3),
+    llm=ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0.3),
     agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
     verbose=True
 )
@@ -132,4 +132,4 @@ with gr.Blocks() as demo:
     clear.click(lambda: [], None, chatbot)
 
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(share=True)

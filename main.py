@@ -96,19 +96,24 @@ agent = initialize_agent(
 def run_pipeline(prompt, country, synonym_range, email):
     result = agent.invoke(prompt)
     result_json = parse_news_output(result['output'])
+    
     # database 폴더에 JSON 저장, 매번 다른 이름이 필요하니 UUID 사용
-    
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    save_dir = os.path.join(base_dir, "database")
+    os.makedirs(save_dir, exist_ok=True)
+
     unique_filename = f"summary_{uuid.uuid4()}.json"
-    with open(os.path.join("database", unique_filename), "w", encoding="utf-8") as f:
+    file_path = os.path.join(save_dir, unique_filename)
+
+    with open(file_path, "w", encoding="utf-8") as f:
         json.dump(result_json, f, ensure_ascii=False, indent=4)
-    
-    # RAG 저장
-    
+        
+    # 이메일 전송
     if email and email.strip():
         pdf_path = export_json_to_pdf(result_json)
         send_email_with_pdf(email, pdf_path)
     
-    return result
+    return result_json
 
 with gr.Blocks() as demo:
     gr.Markdown("## 🧠 Daily AI Briefing Assistant")
@@ -125,4 +130,4 @@ with gr.Blocks() as demo:
     submit.click(fn=run_pipeline, inputs=[prompt, country, synonym_range, email], outputs=output)
 
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(share=True)
