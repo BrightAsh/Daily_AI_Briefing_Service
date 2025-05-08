@@ -5,9 +5,18 @@ from function_dev.synonym_finder import find_synonyms
 from function_dev.paper_downloader import download_paper
 from function_dev.papaer_summarizer_connector import summarize_bart
 from rouge_score import rouge_scorer
+import re
 
 def Paper_pipeline(keyword, days, n=1, country='Korea'):
     keywords = find_synonyms(keyword, n, country)
+
+    keywords = [kw for kw in keywords if re.fullmatch(r'[A-Za-z0-9\- ]+', kw)]
+
+    if not keywords:
+        print('논문 검색은 관련 키워드를 영어로 작성해주세요!')
+        return
+
+
     summarized_papers = []
     seen_urls = set()   # ✅ 중복 방지용
 
