@@ -6,7 +6,7 @@ from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.docstore.document import Document
 
-def run_vector_pipeline(database_dir: str = "database"):
+def run_vector_pipeline(json_data_dir: str = "json_data"):
     EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
     FAISS_INDEX_PATH = "faiss_index"
 
@@ -17,11 +17,11 @@ def run_vector_pipeline(database_dir: str = "database"):
     )
     documents = []
 
-    for file_name in os.listdir(database_dir):
+    for file_name in os.listdir(json_data_dir):
         if not file_name.endswith(".json"):
             continue
 
-        file_path = os.path.join(database_dir, file_name)
+        file_path = os.path.join(json_data_dir, file_name)
         with open(file_path, "r", encoding="utf-8") as f:
             try:
                 data = json.load(f)

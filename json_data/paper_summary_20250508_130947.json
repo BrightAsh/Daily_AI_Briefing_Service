@@ -1,0 +1,37 @@
+[
+    {
+        "title": "[Is the end of Insight in Sight ?](https://arxiv.org/pdf/2505.04627v1.pdf)",
+        "url": "https://arxiv.org/pdf/2505.04627v1.pdf",
+        "summary": "물리-정보 신경망(PINN) 기반 딥러닝 적용의 가중치 행렬은 물리 문제의 수학적 구조에 대한 명확한 연결을 갖지 않는 것으로 나타났다."
+    },
+    {
+        "title": "[Score Distillation Sampling for Audio: Source Separation, Synthesis, and Beyond](https://arxiv.org/pdf/2505.04621v1.pdf)",
+        "url": "https://arxiv.org/pdf/2505.04621v1.pdf",
+        "summary": "오디오-SDS는 스코어 증류 샘플링(SDS) 컨디셔닝된 오디오 확산 모델의 일반화이며, 물리적으로 정보화된 충격 사운드 시뮬레이션을 안내하고 신속한 특정 소스 분리를 수행할 수 있다."
+    },
+    {
+        "title": "[On Path to Multimodal Generalist: General-Level and General-Bench](https://arxiv.org/pdf/2505.04620v1.pdf)",
+        "url": "https://arxiv.org/pdf/2505.04620v1.pdf",
+        "summary": "멀티모달 대형 언어 모델(MLLM)은 전문가 이전 모델과 달리 AGI로 진화하고 있으며, 업무 전반에 걸쳐 성능이 높을수록 MLLM 역량이 강해지며 인간 수준의 AI에 더 가까워진다."
+    },
+    {
+        "title": "[WATCH: Weighted Adaptive Testing for Changepoint Hypotheses via Weighted-Conformal Martingales](https://arxiv.org/pdf/2505.04608v1.pdf)",
+        "url": "https://arxiv.org/pdf/2505.04608v1.pdf",
+        "summary": "고난도 환경에서 AI 시스템을 사용하는 것은 안전하지 않은 행동을 신속하게 감지하고 해결하기 위해 지속적인 배치 후 모니터링이 필요하다."
+    },
+    {
+        "title": "[Perpetuating Misogyny with Generative AI: How Model Personalization Normalizes Gendered Harm](https://arxiv.org/pdf/2505.04600v1.pdf)",
+        "url": "https://arxiv.org/pdf/2505.04600v1.pdf",
+        "summary": "오픈소스 TTI 모델을 공유하고 개발하는 가장 적극적인 플랫폼인 CivitAI에 대한 탐색적 사회 기술에 대한 연구."
+    },
+    {
+        "title": "[Privacy-preserving neutral atom-based quantum classifier towards real healthcare applications](https://arxiv.org/pdf/2505.04570v1.pdf)",
+        "url": "https://arxiv.org/pdf/2505.04570v1.pdf",
+        "summary": "헬스케어 영역을 위한 인공지능(AI) 및 머신 러닝(ML)의 기술적 발전과 ML 헬스케어 애플리케이션의 데이터 프라이버시에 대한 논의."
+    },
+    {
+        "title": "[An imageless magnetic resonance framework for fast and cost-effective decision-making](https://arxiv.org/pdf/2505.04550v1.pdf)",
+        "url": "https://arxiv.org/pdf/2505.04550v1.pdf",
+        "summary": "무이미지 자기 공명 진단(IMRD)은 k-공간 샘플링 및 이미지 재구성을 우회하며, 최적화된 펄스 시퀀스와 최소 저-필드 하드웨어를 사용한다."
+    }
+]
