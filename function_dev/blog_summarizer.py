@@ -68,36 +68,42 @@ def hierarchical_summary(full_text, keyword=None, max_input_length=1024):
         chunk_summaries.append(summary)
         print(f"🧩 부분 {i}/{len(text_chunks)} summary: {summary}")
 
-    combined_summary = " ".join(chunk_summaries)
-    combined_token_count = len(kobart_tokenizer.encode(combined_summary))
-    print(f"🔍 combined summary token count: {combined_token_count}")
-
-    if combined_token_count <= max_input_length:
-        print("✅ 최종 요약 입력 길이 가능 → 요약 시작")
-        final_summary = summarize_kobart(combined_summary)
+    if len(chunk_summaries) == 1:
+        # ✅ 청크가 하나라면 → 요약 한 번만 반환
+        final_summary = chunk_summaries[0]
+        print("✅ 청크 1개 → 추가 요약 없이 반환")
     else:
-        print("⚠️ combined summary 길이 초과 → 다시 나누기")
-        new_sentences = split_text_into_sentences(combined_summary)
-        new_chunks = group_sentences_by_token_limit(new_sentences, kobart_tokenizer, max_input_length)
+        # ✅ 청크가 여러개 → 합치기
+        combined_summary = " ".join(chunk_summaries)
+        combined_token_count = len(kobart_tokenizer.encode(combined_summary))
+        print(f"🔍 combined summary token count: {combined_token_count}")
 
-        new_summaries = []
-        for i, chunk in enumerate(new_chunks, 1):
-            print(f"🔄 재분할 {i}/{len(new_chunks)} 요약 중...")
-            summary = summarize_kobart(chunk)
-            new_summaries.append(summary)
-            print(f"🔄 재분할 {i}/{len(new_chunks)} summary: {summary}")
-
-        final_combined = " ".join(new_summaries)
-
-        if len(kobart_tokenizer.encode(final_combined)) <= max_input_length:
-            print("✅ 재분할된 combined summary 입력 가능 → 최종 요약")
-            final_summary = summarize_kobart(final_combined)
+        if combined_token_count <= max_input_length:
+            print("✅ 최종 요약 입력 길이 가능 → 추가 요약")
+            final_summary = summarize_kobart(combined_summary)
         else:
-            print("⚠️ 재분할된 combined summary도 입력 초과 → 더 이상 나누지 않고 그대로 사용")
-            final_summary = final_combined
+            print("⚠️ combined summary 길이 초과 → 다시 나누기")
+            new_sentences = split_text_into_sentences(combined_summary)
+            new_chunks = group_sentences_by_token_limit(new_sentences, kobart_tokenizer, max_input_length)
 
-    # ✅ 유사도 필터 적용
-    if keyword:
+            new_summaries = []
+            for i, chunk in enumerate(new_chunks, 1):
+                print(f"🔄 재분할 {i}/{len(new_chunks)} 요약 중...")
+                summary = summarize_kobart(chunk)
+                new_summaries.append(summary)
+                print(f"🔄 재분할 {i}/{len(new_chunks)} summary: {summary}")
+
+            final_combined = " ".join(new_summaries)
+            final_combined_token_count = len(kobart_tokenizer.encode(final_combined))
+            print(f"🔍 재분할 combined summary token count: {final_combined_token_count}")
+
+            if final_combined_token_count <= max_input_length:
+                print("✅ 재분할된 combined summary 입력 가능 → 최종 요약")
+                final_summary = summarize_kobart(final_combined)
+            else:
+                print("⚠️ 재분할된 combined summary도 입력 초과 → 더 이상 나누지 않고 그대로 사용")
+                final_summary = final_combined
+    if keyword and is_relevant:
         if is_relevant(final_summary, keyword):
             return final_summary.replace('\n', ' ')
         else:
