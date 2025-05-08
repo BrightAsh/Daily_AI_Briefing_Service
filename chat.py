@@ -29,7 +29,8 @@ SERPAPI_API_KEY = os.getenv("SERPAPI_API_KEY")
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 # 📚 벡터DB 로딩
-CHUNK_PATH = "doc_chunks.npy"
+base_path = os.path.dirname(__file__)
+CHUNK_PATH = os.path.join(base_path, "faiss_index", "doc_chunks.npy")
 EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 chunks = np.load(CHUNK_PATH, allow_pickle=True)
 embedding_model = HuggingFaceEmbeddings(model_name=EMBED_MODEL)
@@ -49,7 +50,7 @@ def filtered_rag_run(query: str, source_filter: str) -> str:
     local_retriever = local_vectordb.as_retriever(search_type="mmr", search_kwargs={"k": 3})
     rag_chain = RetrievalQA.from_chain_type(
         retriever=local_retriever,
-        llm=ChatOpenAI(model_name="gpt-4", temperature=0.3),
+        llm=ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0.3),
         return_source_documents=False
     )
     docs = local_retriever.get_relevant_documents(query)
@@ -61,16 +62,15 @@ def filtered_rag_run(query: str, source_filter: str) -> str:
 def run_summary_tool(text: str) -> str:
     messages = [
         {"role": "system", "content": (
-            "너는 AI 전문가로서 사용자의 질문에 정확하고 친절하게 답변하는 도우미야. "
+            "너는 AI 전문가로서 사용자의 질문에 정확하고 친절하게 답변하는 도우미야. Final Answer는 반드시 한국어로 작성해. "
             "벡터 DB의 검색 결과가 없거나 문서가 부족하면 직접 답하거나 적절한 요약을 제공해줘. "
-            "절대로 '인터넷 검색이 불가능합니다'라고 말하지 마. 답은 항상 한국어로 해줘."
         )},
         {"role": "user", "content": f"{text}"}
     ]
     response = client.chat.completions.create(
-        model="gpt-4",
+        model="gpt-3.5-turbo",
         messages=messages,
-        temperature=0.2
+        temperature=0.1
     )
     return response.choices[0].message.content
 
@@ -106,8 +106,9 @@ tools = [
 # 🧠 에이전트 초기화
 agent = initialize_agent(
     tools=tools,
-    llm=ChatOpenAI(model_name="gpt-4", temperature=0.3),
+    llm=ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0.3),
     agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+    handle_parsing_errors=True,
     verbose=True
 )
 
@@ -132,4 +133,4 @@ with gr.Blocks() as demo:
     clear.click(lambda: [], None, chatbot)
 
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(share=True)

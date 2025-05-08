@@ -4,9 +4,16 @@ from function_dev.News_fetch_full_articles import process_articles
 from function_dev.News_summarizer import hierarchical_summary
 from rouge_score import rouge_scorer
 
+import random
+
 def News_pipeline(keyword, days, n=1, country='Korea'):
     keywords = find_synonyms(keyword, n, country)
     all_articles = fetch_data_newsapi(keywords, days)
+    
+    # 기사 순서를 모두 섞고 앞의 5개만 선택
+    random.shuffle(all_articles)
+    all_articles = all_articles[:5]
+    
     full_articles = process_articles(all_articles)
 
     scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)

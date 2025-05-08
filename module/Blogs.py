@@ -1,4 +1,5 @@
 import sys
+import random
 sys.path.append("E:\Daily_AI_Briefing_Service")
 
 from function_dev.synonym_finder import find_synonyms
@@ -15,7 +16,10 @@ def Blogs_pipeline(keyword, days, n=1, country='Korea'):
     rouge_scores = []  # 각 기사별 점수 저장용
 
     for keyword in keywords:
-        blogs = crawl_tistory_blogs_google(keyword, days, 20)
+        blogs = crawl_tistory_blogs_google(keyword, days, 5)
+        random.shuffle(blogs)  # ✅ 블로그 순서를 모두 섞고 앞의 5개만 선택
+        blogs = blogs[:5]
+        
         for idx, blog in enumerate(blogs, 1):
             title = blog.get("title", "")
             full_text = blog.get("full_text", "").strip()
