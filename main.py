@@ -100,7 +100,7 @@ def run_pipeline(prompt, country, synonym_range, email):
 
         # JSON 저장
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        save_dir = os.path.join(base_dir, "database")
+        save_dir = os.path.join(base_dir, "json_data")
         os.makedirs(save_dir, exist_ok=True)
         
         source_type = infer_source_type(prompt)
@@ -115,7 +115,7 @@ def run_pipeline(prompt, country, synonym_range, email):
             send_email_with_pdf(email, pdf_path)
 
         # 벡터화
-        run_vector_pipeline(database_dir=save_dir)
+        run_vector_pipeline(json_data_dir=save_dir)
 
     thread = threading.Thread(target=task)
     thread.start()
