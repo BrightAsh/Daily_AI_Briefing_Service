@@ -13,6 +13,7 @@ def download_paper(keyword,day):
 
     for paper in papers:
         print(f"\n⏳ Processing: {paper['title']}")
+        print(f" Extracted url: {paper['pdf_url']}")
         body_text = extract_body_from_pdf_url(paper['pdf_url'])
         if body_text:
             body_text = body_text.replace('\n', ' ')
@@ -58,7 +59,6 @@ def extract_body_from_pdf_url(pdf_url):
         pdf_bytes = io.BytesIO(response.content)
         full_text = extract_text(pdf_bytes)
 
-        # Abstract와 References 제거
         return extract_abstract(full_text)
 
     except Exception as e:
@@ -69,37 +69,42 @@ def extract_body_from_pdf_url(pdf_url):
 def extract_abstract(text: str) -> str:
     """
     논문 텍스트에서 Abstract만 정확히 추출합니다.
-    Abstract ~ Introduction 사이를 기준으로 하되, 중간에 삽입된 실험/QA 등도 필터링합니다.
+    다양한 형식의 Abstract ~ Introduction 사이를 포괄적으로 인식합니다.
     """
 
-    # 1. Abstract 시작 위치
-    match = re.search(r'(?i)(^|\n)\s*abstract\s*[\n:]', text)
+    # 1. Abstract 시작 위치: 다양한 구분자 지원 (줄바꿈, em dash 포함)
+    abstract_pattern = re.compile(
+        r'(?i)(^|\n)\s*abstract\s*(—|–|:|\.|\n)', re.IGNORECASE)
+    match = abstract_pattern.search(text)
     if not match:
         return ""
 
     start = match.end()
 
-    # 2. Introduction 시작 위치 찾기
-    intro = re.search(r'(?i)(\n|^)\s*(?:[0-9]+|[IVXivx]+)?[\.\)]?\s*introduction', text[start:])
-    end = start + intro.start() if intro else len(text)
+    # 2. Introduction 시작 위치 찾기: 다양한 형식 포괄
+    intro_pattern = re.compile(
+        r'(?i)(^|\n)\s*(?:[0-9]+|[IVXivx]+)?[\.\)]?\s*introduction', re.IGNORECASE)
+    intro_match = intro_pattern.search(text[start:])
+    end = start + intro_match.start() if intro_match else len(text)
 
-    # 3. Abstract 본문만 추출
+    # 3. Abstract 본문 추출
     abstract = text[start:end].strip()
 
-    # 4. 불필요한 내용 필터링 (시스템 응답, QA 예시, 태그 등)
+    abstract = re.sub(r'(\w+)-\s+(\w+)', r'\1\2', abstract)
+
+    # 4. 불필요한 줄 필터링
     lines = abstract.split('\n')
     filtered = []
     for line in lines:
-        # 너무 짧은 문장 / 숫자만 있는 줄 제거
-        if len(line.strip()) < 15:
+        line = line.strip()
+        if len(line) < 15:
             continue
-        # 시스템 응답, 영상, 위키 등 제거
         if any(kw in line for kw in [
             "SoccerAgent", "Video", "This video shows", "Answer>", "<Call>", "Tool>", "Wiki", "Player", "MatchVision"
         ]):
             continue
-        if re.match(r'[A-D]\)', line.strip()):  # 선택지
+        if re.match(r'[A-D]\)', line):
             continue
-        filtered.append(line.strip())
+        filtered.append(line)
 
     return ' '.join(filtered)
