@@ -29,7 +29,8 @@ SERPAPI_API_KEY = os.getenv("SERPAPI_API_KEY")
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 # 📚 벡터DB 로딩
-CHUNK_PATH = "doc_chunks.npy"
+base_path = os.path.dirname(__file__)
+CHUNK_PATH = os.path.join(base_path, "faiss_index", "doc_chunks.npy")
 EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 chunks = np.load(CHUNK_PATH, allow_pickle=True)
 embedding_model = HuggingFaceEmbeddings(model_name=EMBED_MODEL)
