@@ -73,6 +73,6 @@ agent = initialize_agent(
 if __name__ == "__main__":
     user_input = input("요청을 입력하세요: ")
     result = agent.invoke(user_input)
-    pdf_path = export_json_to_pdf(result)
-    send_email_with_pdf(to_email, pdf_path)
+    #pdf_path = export_json_to_pdf(result)
+    #send_email_with_pdf(to_email, pdf_path)
     print("\n[최종 결과]\n", result)
