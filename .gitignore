@@ -1,5 +1,4 @@
 venv/
 .env
 .idea
-module/__pycache__/
-function_dev/__pycache__/
+**/__pycache__/
