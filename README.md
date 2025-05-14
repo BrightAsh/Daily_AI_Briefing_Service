@@ -118,7 +118,7 @@ RAG 기반 챗봇을 통해 질의응답까지 지원하는 **AI 리서치 자�
 
 ## 4.3 데이터 처리 흐름
 
-![DataFlow](./asset/DataFlow.png)
+![DataFlow](./asset/DataFlow.PNG)
 
 - 수집된 텍스트는 모두 벡터화되어 FAISS 인덱스로 저장됩니다.
 - 문서 유형별로 "news", "blog", "paper" 메타데이터가 부여되어 필터링 기반 검색이 가능합니다.
