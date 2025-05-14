@@ -109,10 +109,10 @@ RAG 기반 챗봇을 통해 질의응답까지 지원하는 **AI 리서치 자�
 
 | 단계 | 화면 |
 |------|------|
-| 메인 입력 페이지 | ![mainpage](./asset/UX_mainpage.png) |
-| 수집 및 요약 결과 출력 | ![Search_Result](./asset/UX_Search_Result.png) |
-| PDF 이메일 전송 화면 | ![Send_pdf](./asset/UX_Send_pdf.png) |
-| 챗봇 질의응답 페이지 | ![Chatbot](./asset/UX_Chatbot.png) |
+| 메인 입력 페이지 | ![mainpage](./asset/UX_mainpage.PNG) |
+| 수집 및 요약 결과 출력 | ![Search_Result](./asset/UX_Search_Result.PNG) |
+| PDF 이메일 전송 화면 | ![Send_pdf](./asset/UX_Send_pdf.PNG) |
+| 챗봇 질의응답 페이지 | ![Chatbot](./asset/UX_Chatbot.PNG) |
 
 
 
